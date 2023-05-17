@@ -21,7 +21,12 @@ const client = new MongoClient(uri, {
 });
 
 export const fillArrWithTickets = (res, arr) => {
-  res.forEach((item) => arr.push(Object.values(item)[1]));
+  res.forEach((item) => {
+    const uniqueTicketId = Object.values(item)[1];
+    const uniqueTicketNumber = Object.values(item)[6];
+
+    arr.push(`Код ${uniqueTicketId}, id купона: ${uniqueTicketNumber}`);
+  });
 };
 
 export const getTicketsFromDb = async (phone) => {
@@ -33,7 +38,7 @@ export const getTicketsFromDb = async (phone) => {
     const drawCollection = database.collection(MONGO_DRAW_COLL);
     const statisticCollection = database.collection(MONGO_STAT_COLL);
 
-    const matches = await drawCollection.find({ Телефон: phone }).toArray((err, res) => {
+    const matches = await drawCollection.find({ Телефон: Number(phone) }).toArray((err, res) => {
       if (err) throw err;
       return res;
     });
@@ -47,11 +52,13 @@ export const getTicketsFromDb = async (phone) => {
 
     matches.forEach((match) => {
       const values = Object.values(match);
-      const [, ticket, name, telephone] = values;
+      const [, ticket, name, telephone, , , drawId] = values;
       userState.name = name;
       userState.telephone = telephone;
-      userState.tickets.push(ticket);
+      userState.tickets.push(`Купон: ${ticket}, id генератора: ${drawId}`);
     });
+
+    // console.log(userState);
 
     await statisticCollection.insertOne(userState, (err) => {
       if (err) throw err;
