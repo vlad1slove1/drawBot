@@ -16,7 +16,7 @@ const app = express();
 // draw - идёт розыгрыш
 // state.draw();
 
-// draw - розыгрыш закончился ("заглушка")
+// idle - розыгрыш закончился ("заглушка")
 state.idle();
 
 app.listen(PORT);
