@@ -6,10 +6,10 @@ config();
 const {
   MONGO_HOST,
   MONGO_DB_NAME,
-  MONGO_DRAW_COLL,
-  MONGO_STAT_COLL,
-  MONGO_ANNOUNCE_COLL,
-  MONGO_ADMINS_COLL,
+  MONGO_PARTICIPANTS_COLL,
+  MONGO_STAT_USERS_COLL,
+  MONGO_USERS_TO_ANNOUNCE_COLL,
+  MONGO_ADMIN_USERS_COLL,
 } = process.env;
 
 // url к локальной датабазе
@@ -39,10 +39,10 @@ export const getTicketsFromDb = async (phone) => {
     // console.log('You successfully connected to MongoDB!');
 
     const database = client.db(MONGO_DB_NAME);
-    const drawCollection = database.collection(MONGO_DRAW_COLL);
-    const statisticCollection = database.collection(MONGO_STAT_COLL);
+    const drawCollection = database.collection(MONGO_PARTICIPANTS_COLL);
+    const statisticCollection = database.collection(MONGO_STAT_USERS_COLL);
 
-    const matches = await drawCollection.find({ Телефон: Number(phone) }).toArray((err, res) => {
+    const matches = await drawCollection.find({ Телефон: phone }).toArray((err, res) => {
       if (err) throw err;
       return res;
     });
@@ -84,9 +84,9 @@ export const findUserInAnnounceDb = async (userId) => {
     // console.log('You successfully connected to MongoDB!');
 
     const database = client.db(MONGO_DB_NAME);
-    const announceCollection = database.collection(MONGO_ANNOUNCE_COLL);
+    const announceCollection = database.collection(MONGO_USERS_TO_ANNOUNCE_COLL);
 
-    const match = await announceCollection.find({ id: Number(userId) }).toArray((err, res) => {
+    const match = await announceCollection.find({ id: userId }).toArray((err, res) => {
       if (err) throw err;
 
       return res;
@@ -109,7 +109,7 @@ export const addUserToAnnounceDb = async (data) => {
     // console.log('You successfully connected to MongoDB!');
 
     const database = client.db(MONGO_DB_NAME);
-    const announceCollection = database.collection(MONGO_ANNOUNCE_COLL);
+    const announceCollection = database.collection(MONGO_USERS_TO_ANNOUNCE_COLL);
 
     await announceCollection.insertOne(data);
   } finally {
@@ -129,9 +129,9 @@ export const isUserAdmin = async (userId) => {
     // console.log('You successfully connected to MongoDB!');
 
     const database = client.db(MONGO_DB_NAME);
-    const adminsCollection = database.collection(MONGO_ADMINS_COLL);
+    const adminsCollection = database.collection(MONGO_ADMIN_USERS_COLL);
 
-    const match = await adminsCollection.find({ id: Number(userId) }).toArray((err, res) => {
+    const match = await adminsCollection.find({ id: userId }).toArray((err, res) => {
       if (err) throw err;
 
       return res;
@@ -155,7 +155,7 @@ export const getAnnounceColl = async () => {
     // console.log('You successfully connected to MongoDB!');
 
     const database = client.db(MONGO_DB_NAME);
-    const announceCollection = database.collection(MONGO_ANNOUNCE_COLL);
+    const announceCollection = database.collection(MONGO_USERS_TO_ANNOUNCE_COLL);
 
     const match = await announceCollection.find().toArray((err, res) => {
       if (err) throw err;
@@ -180,7 +180,7 @@ export const deleteFromAnnounceColl = async (userId) => {
     // console.log('You successfully connected to MongoDB!');
 
     const database = client.db(MONGO_DB_NAME);
-    const announceCollection = database.collection(MONGO_ANNOUNCE_COLL);
+    const announceCollection = database.collection(MONGO_USERS_TO_ANNOUNCE_COLL);
 
     await announceCollection.deleteMany({ id: userId });
   } finally {
