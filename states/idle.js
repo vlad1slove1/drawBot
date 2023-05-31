@@ -54,9 +54,17 @@ export default () => {
         // Получаем ответ пользователя
         const answer = textCtx.update.message.text;
 
-        const parsedPhone = answer.slice(1); // без кода страны
+        let parsedPhone;
+
+        if (answer.startsWith('+')) {
+          parsedPhone = answer.slice(2);
+        }
+        if (answer.startsWith('7') || answer.startsWith('8')) {
+          parsedPhone = answer.slice(1);
+        }
+
         getTicketsFromDb(parsedPhone).then((res) => {
-          const phoneNumberRegex = /^(7)[0-9]{10}$/;
+          const phoneNumberRegex = /^(\+7|7|8)\d{10}$/;
 
           // проверка формата
           if (!phoneNumberRegex.test(answer)) {
@@ -106,7 +114,7 @@ export default () => {
    * бот присылает ссылку на гугл-форму для обратной связи
    */
   bot.command('help', async (ctx) => {
-    ctx.reply(`Нажмите на ссылку для заполнения формы: ${FEEDBACK_LINK}`, { disable_web_page_preview: true });
+    ctx.reply(`Перейдите по ссылке для заполнения формы: ${FEEDBACK_LINK}`, { disable_web_page_preview: true });
   });
 
   // Обработчик команды /subscribe (подписаться на уведомления) выключен
