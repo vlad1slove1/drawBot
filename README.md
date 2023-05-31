@@ -116,3 +116,4 @@ _*Пока приложение запущено, терминал у вас б�
 * express.js
 * [mongodb](https://www.mongodb.com/) database
 * [numeralize-ru](https://github.com/anotherpit/numeralize-ru)
+* [node-cron](https://github.com/node-cron/node-cron)
