@@ -1,3 +1,12 @@
+import { dirname, resolve } from 'path';
+import { writeFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const getFixturePath = (filename) => resolve(__dirname, '..', '..', '__fixtures__', filename);
+
 /**
  * Создаём массив строк (совпадений)
  * для дальнейшего вывода в сообщении
@@ -5,7 +14,7 @@
  * @param {Array} res массив объектов (пользователей)
  * @param {Array} arr массив строк (совпадений)
  */
-const fillArrWithTickets = (res, arr) => {
+export const fillArrWithTickets = (res, arr) => {
   res.forEach((item) => {
     const uniqueTicketId = Object.values(item)[1];
     const uniqueTicketNumber = Object.values(item)[6];
@@ -28,4 +37,7 @@ const fillArrWithTickets = (res, arr) => {
   });
 };
 
-export default fillArrWithTickets;
+export const logData = (filename, data) => writeFileSync(getFixturePath(filename), data, (err) => {
+  if (err) throw err;
+  console.log('Файл записан!');
+});

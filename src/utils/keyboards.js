@@ -4,6 +4,7 @@ import { Markup } from 'telegraf';
  * @returns {Array} массив админ-кнопок
  */
 export const adminKeyboard = () => Markup.keyboard([
+  ['Отправить аннонс 📲'],
   ['Начало трансляции ▶️'],
   ['Список победителей 🎟'],
 ]).resize();

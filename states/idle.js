@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { Telegraf, session } from 'telegraf';
 import numeralize from 'numeralize-ru';
 
-import fillArrWithTickets from '../src/utils/common.js';
+import { fillArrWithTickets } from '../src/utils/common.js';
 import { getTicketsFromDb } from '../src/utils/dbActions.js';
 
 export default () => {

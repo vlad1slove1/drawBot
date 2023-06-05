@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 import { Telegraf, Markup, session } from 'telegraf';
 import numeralize from 'numeralize-ru';
 
-import fillArrWithTickets from '../src/utils/common.js';
+import { fillArrWithTickets } from '../src/utils/common.js';
 import {
   getTicketsFromDb,
   findUserInAnnounceDb,
@@ -21,12 +21,11 @@ export default () => {
   const bot = new Telegraf(BOT_TOKEN);
   bot.use(session());
 
-  /**
-   * В состоянии хранится автомат awaitingAnswer
-   * и обработчик номера телефона phoneNumber
-   */
+  // Стейт с флагами
   bot.context.state = {
     awaitingAnswer: true,
+    adminAction: '',
+    messageType: '',
     phoneNumber: '',
   };
 
@@ -102,6 +101,7 @@ export default () => {
             actionCtx.reply('На ваш номер телефона не оформлено купонов');
 
             setTimeout(() => {
+              bot.context.state.messageType = 'replyOnPhone';
               actionCtx.replyWithMarkdownV2('Хотите проверить купоны на другом номере? */check*');
             }, 2000);
 
@@ -172,12 +172,42 @@ export default () => {
     next();
   });
 
+  bot.url((ctx) => {
+    switch (bot.context.state.adminAction) {
+      case 'startStream':
+        getAnnounceColl().then((res) => res.forEach((item) => {
+          bot.telegram.sendMessage(item.id, `Трансляция уже началась, присоединяйтесь: ${ctx.message.text}`);
+        }));
+
+        ctx.reply('Делаю рассылку с трансляцией', adminKeyboard());
+        bot.context.state.adminAction = '';
+        break;
+
+      case 'showWinners':
+        getAnnounceColl().then((res) => res.forEach((item) => {
+          bot.telegram.sendMessage(
+            item.id,
+            `Наш розыгрыш подошел к концу, и мы рады объявить победителей. Узнать, кто получил ценные призы, можете по ссылке: ${ctx.message.text}`,
+          );
+        }));
+
+        ctx.reply('Отправляю пост с победителями', adminKeyboard());
+        bot.context.state.adminAction = '';
+        break;
+
+      default:
+        console.log('unexpected admin action');
+    }
+  });
+
   /**
    * Обработчик админ-кнопки:
    * при нажатии будет запрос от бота, в который нужно вставить ссылку на трансляцию
    * бот разошлёт сообщение всем пользователям, находящимся в коллцекции MONGO_ANNOUNCE_COLL
    */
   bot.hears('Начало трансляции ▶️', (ctx) => {
+    bot.context.state.adminAction = 'startStream';
+
     ctx.reply(
       'Вставьте ссылку на трансляцию',
       {
@@ -186,22 +216,7 @@ export default () => {
           input_field_placeholder: 'Ссылка',
         },
       },
-    ).then(() => {
-      if (bot.context.state.awaitingAnswer) {
-        bot.url((urlCtx) => {
-          getAnnounceColl().then((res) => res.forEach((item) => {
-            bot.telegram.sendMessage(item.id, `Трансляция уже началась, присоединяйтесь: ${urlCtx.message.text}`);
-          }));
-
-          urlCtx.reply('Делаю рассылку на трансляцию', adminKeyboard());
-          // Сбрасываем флаг состояния
-          bot.context.state.awaitingAnswer = false;
-        });
-      }
-
-      // Сбрасываем флаг состояния
-      bot.context.state.awaitingAnswer = true;
-    });
+    );
   });
 
   /**
@@ -210,6 +225,8 @@ export default () => {
    * бот разошлёт сообщение всем пользователям, находящимся в коллцекции MONGO_ANNOUNCE_COLL
    */
   bot.hears('Список победителей 🎟', (ctx) => {
+    bot.context.state.adminAction = 'showWinners';
+
     ctx.reply(
       'Вставьте ссылку на пост с победителями',
       {
@@ -218,25 +235,27 @@ export default () => {
           input_field_placeholder: 'Ссылка',
         },
       },
-    ).then(() => {
-      if (bot.context.state.awaitingAnswer) {
-        bot.url((urlCtx) => {
-          getAnnounceColl().then((res) => res.forEach((item) => {
-            bot.telegram.sendMessage(
-              item.id,
-              `Наш розыгрыш подошел к концу, и мы рады объявить победителей. Узнать, кто получил ценные призы, можете по ссылке: ${urlCtx.message.text}`,
-            );
-          }));
+    );
+  });
 
-          urlCtx.reply('Делаю рассылку с победителями', adminKeyboard());
-          // Сбрасываем флаг состояния
-          bot.context.state.awaitingAnswer = false;
-        });
-      }
+  /**
+   * Обработчик админ-кнопки:
+   * при нажатии будет запрос от бота, в который нужно вставить ссылку на пост с победителями
+   * бот разошлёт сообщение всем пользователям, находящимся в коллцекции MONGO_ANNOUNCE_COLL
+   */
+  bot.hears('Отправить аннонс 📲', (ctx) => {
+    bot.context.state.messageType = 'replyOnAnnounce';
+    bot.context.state.awaitingAnswer = true;
 
-      // Сбрасываем флаг состояния
-      bot.context.state.awaitingAnswer = true;
-    });
+    ctx.reply(
+      'Вставьте текст сообщения',
+      {
+        reply_markup: {
+          force_reply: true,
+          input_field_placeholder: 'текст',
+        },
+      },
+    );
   });
 
   // Обработчик инлайн-кнопок "Да/Нет" по уведомлениям
@@ -259,6 +278,9 @@ export default () => {
    * ответ должен быть в виде номера телефона формата "71234567890"
    */
   bot.command('check', (ctx) => {
+    bot.context.state.messageType = 'replyOnPhone';
+    bot.context.state.awaitingAnswer = true;
+
     ctx.replyWithHTML(
       'Введите ваш номер телефона в формате <b>71234567890</b>',
       {
@@ -268,65 +290,6 @@ export default () => {
         },
       },
     );
-
-    bot.on('message', async (textCtx) => {
-      if (bot.context.state.awaitingAnswer) {
-        // Получаем ответ пользователя
-        const answer = textCtx.update.message.text;
-
-        let parsedPhone;
-
-        if (answer.startsWith('+')) {
-          parsedPhone = answer.slice(2);
-        }
-        if (answer.startsWith('7') || answer.startsWith('8')) {
-          parsedPhone = answer.slice(1);
-        }
-
-        getTicketsFromDb(parsedPhone).then((res) => {
-          const phoneNumberRegex = /^(\+7|7|8)\d{10}$/;
-
-          // проверка формата
-          if (!phoneNumberRegex.test(answer)) {
-            textCtx.reply('Неправильный формат телефона');
-            bot.context.state.awaitingAnswer = false;
-
-            return;
-          }
-
-          // формат правильный, но совпадений не найдено
-          if (phoneNumberRegex.test(answer) && res.length === 0) {
-            textCtx.reply('Купонов по данному номеру не найдено');
-            bot.context.state.awaitingAnswer = false;
-
-            return;
-          }
-
-          const ticketsCount = Object.values(res[0])[4];
-          const pluralizedTickets = numeralize.pluralize(ticketsCount, 'купон', 'купона', 'купонов');
-
-          /**
-           * формируем массив из строк с купонами формата:
-           * Номера ваших купонов:
-           * Код 1234567890, id купона: 0
-           * Код 1234567890, id купона: 1
-           */
-          const tickets = ['*Номера ваших купонов:*'];
-          fillArrWithTickets(res, tickets);
-
-          const stringifiedTickets = tickets.join('\n');
-
-          // Сбрасываем флаг состояния
-          bot.context.state.awaitingAnswer = false;
-
-          textCtx.replyWithMarkdownV2(
-            `На ваш номер телефона оформлено *${ticketsCount} ${pluralizedTickets}*\n\n${stringifiedTickets}`,
-          );
-        });
-      }
-    });
-
-    bot.context.state.awaitingAnswer = true;
   });
 
   /**
@@ -361,6 +324,89 @@ export default () => {
         ctx.reply('Вы успешно отписались от уведомлений');
       }
     });
+  });
+
+  bot.on('message', (ctx) => {
+    switch (bot.context.state.messageType) {
+      case 'replyOnPhone':
+        if (bot.context.state.awaitingAnswer) {
+          // Получаем ответ пользователя
+          const answer = ctx.message.text;
+
+          let parsedPhone;
+
+          if (answer.startsWith('+')) {
+            parsedPhone = answer.slice(2);
+          }
+          if (answer.startsWith('7') || answer.startsWith('8')) {
+            parsedPhone = answer.slice(1);
+          }
+
+          getTicketsFromDb(parsedPhone).then((res) => {
+            const phoneNumberRegex = /^(\+7|7|8)\d{10}$/;
+
+            // проверка формата
+            if (!phoneNumberRegex.test(answer)) {
+              ctx.reply('Неправильный формат телефона');
+              bot.context.state.awaitingAnswer = false;
+
+              return;
+            }
+
+            // формат правильный, но совпадений не найдено
+            if (phoneNumberRegex.test(answer) && res.length === 0) {
+              ctx.reply('Купонов по данному номеру не найдено');
+              bot.context.state.awaitingAnswer = false;
+
+              return;
+            }
+
+            const ticketsCount = Object.values(res[0])[4];
+            const pluralizedTickets = numeralize.pluralize(ticketsCount, 'купон', 'купона', 'купонов');
+
+            /**
+             * формируем массив из строк с купонами формата:
+             * Номера ваших купонов:
+             * Код 1234567890, id купона: 0
+             * Код 1234567890, id купона: 1
+             */
+            const tickets = ['*Номера ваших купонов:*'];
+            fillArrWithTickets(res, tickets);
+
+            const stringifiedTickets = tickets.join('\n');
+
+            // Сбрасываем флаг состояния
+            bot.context.state.awaitingAnswer = false;
+
+            ctx.replyWithMarkdownV2(
+              `На ваш номер телефона оформлено *${ticketsCount} ${pluralizedTickets}*\n\n${stringifiedTickets}`,
+            );
+          });
+        }
+
+        bot.context.state.messageType = '';
+        bot.context.state.awaitingAnswer = true;
+        break;
+
+      case 'replyOnAnnounce':
+        if (bot.context.state.awaitingAnswer) {
+          const answer = ctx.message.text;
+          getAnnounceColl()
+            .then((res) => res.forEach((item) => bot.telegram.sendMessage(item.id, answer)));
+
+          // Сбрасываем флаг состояния
+          bot.context.state.awaitingAnswer = false;
+
+          ctx.reply('Рассылаю аннонс', adminKeyboard());
+        }
+
+        bot.context.state.messageType = '';
+        bot.context.state.awaitingAnswer = true;
+        break;
+
+      default:
+        console.log('unexpected message type');
+    }
   });
 
   bot.launch();
