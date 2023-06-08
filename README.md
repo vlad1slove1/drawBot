@@ -112,9 +112,8 @@ _*Пока приложение запущено, терминал у вас б�
 
 ## Стек
 
-* javascript
-* [telegraf.js](https://telegrafjs.org/#/) framework
-* express.js
-* [mongodb](https://www.mongodb.com/) database
+<p align="left"> <a href="https://expressjs.com" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/express/express-original-wordmark.svg" alt="express" width="40" height="40"/> </a> <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/javascript/javascript-original.svg" alt="javascript" width="40" height="40"/> </a> <a href="https://www.mongodb.com/" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/mongodb/mongodb-original-wordmark.svg" alt="mongodb" width="40" height="40"/> </a> <a href="https://nodejs.org" target="_blank" rel="noreferrer"> <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/nodejs/nodejs-original-wordmark.svg" alt="nodejs" width="40" height="40"/> </a> <a href="https://telegrafjs.org/#/" target="_blank" rel="noreferrer"> <img src="https://telegraf.js.org/media/logo.svg" alt="express" width="40" height="40"/> </a> <a href="https://developers.google.com/sheets/api/quickstart/js" target="_blank" rel="noreferrer"> <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Google_Sheets_logo_%282014-2020%29.svg/49px-Google_Sheets_logo_%282014-2020%29.svg.png?20201024100414" alt="express" width="40" height="40"/> </a> </p>
+
 * [numeralize-ru](https://github.com/anotherpit/numeralize-ru)
-* [node-cron](https://github.com/node-cron/node-cron)
+* [JWT](https://jwt.io/)
+* [helmet](https://helmetjs.github.io/)
