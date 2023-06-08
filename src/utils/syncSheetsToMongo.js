@@ -25,35 +25,46 @@ const client = new MongoClient(uri, {
   },
 });
 
-// Парсинг пользователя в нужной паре { key: prop } для mongodb
-const parseUser = (user, result) => {
-  const newDocument = {
-    'Код купона': user['Код купона'],
-    Покупатель: user['Покупатель'],
-    Телефон: user['Телефон'],
-    'Кол-во купонов у покупателя': user['Кол-во купонов у покупателя'],
-    ГУИД: user['ГУИД'],
-    'Номер купона для генератора случайных чисел': user['Номер купона для генератора случайных чисел'],
-  };
-
-  result.push(newDocument);
-};
-
 /**
  * Сначала обнуляем коллекцию, затем загружаем новую
  *
  * @param {Array} data Массив объектов
  */
-const addUsersToTestDb = async (data) => {
+const addUsersToDb = async (data) => {
   try {
     await client.connect();
     // console.log('You successfully connected to MongoDB!');
 
     const database = client.db(MONGO_DB_NAME);
-    const announceCollection = database.collection(MONGO_PARTICIPANTS_COLL);
+    const participantsColl = database.collection(MONGO_PARTICIPANTS_COLL);
 
-    await announceCollection.deleteMany();
-    await announceCollection.insertMany(data);
+    await participantsColl.deleteMany();
+    await participantsColl.insertMany(data);
+  } finally {
+    await client.close();
+  }
+};
+
+/**
+ * Получаем всю коллекцию участников
+ *
+ * @returns {Promise} array of objects (массив объектов)
+ */
+const getParticipantsCollection = async () => {
+  try {
+    await client.connect();
+    // console.log('You successfully connected to MongoDB!');
+
+    const database = client.db(MONGO_DB_NAME);
+    const participantsColl = database.collection(MONGO_PARTICIPANTS_COLL);
+
+    const match = await participantsColl.find().toArray((err, res) => {
+      if (err) throw err;
+
+      return res;
+    });
+
+    return match;
   } finally {
     await client.close();
   }
@@ -62,9 +73,10 @@ const addUsersToTestDb = async (data) => {
 /**
  * Подключаемся к гугл табличке по:
  * GOOGLE_SPREADSHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY
- * копируем все строки, делаем парсинг и обновляем базу данных
+ * сначала очищаем всю таблицу
+ * затем копируем все документы из БД в таблицу
  */
-const syncSheetsToMongo = async () => {
+export const syncSheetsToMongo = async () => {
   // Initialize the sheet - doc ID is the long id in the sheets URL
   const doc = new GoogleSpreadsheet(GOOGLE_SPREADSHEET_ID);
 
@@ -78,18 +90,46 @@ const syncSheetsToMongo = async () => {
 
   await doc.loadInfo(); // loads document properties and worksheets
 
-  const firstSheet = doc.sheetsByIndex[0];
-  const rows = await (firstSheet.getRows({ offset: 0 }));
+  // Выбираем первый лист
+  const sheet = doc.sheetsByIndex[0];
+  // Очищаем лист, начиная со второй строки
+  await sheet.clear(`A2:E${sheet.rowCount}`);
 
-  const arrayOfUsers = [];
-  rows.forEach((row) => parseUser(row, arrayOfUsers));
-
-  try {
-    addUsersToTestDb(arrayOfUsers);
-    console.log('Database successfully updated!');
-  } catch (err) {
-    console.log(err.message);
-  }
+  // Загружаем коллекцию в гугл табличку
+  getParticipantsCollection().then(async (res) => {
+    await sheet.addRows(res, { startIndex: 2, insert: false });
+  });
 };
 
-export default syncSheetsToMongo;
+/**
+ * Функция для обработки входящего POST запроса
+ * с данными в request.data
+ * делаем парсинг данных и загружаем в базу данных
+ *
+ * @param {JSON} data данные из req.data
+ * @returns expression
+ */
+export const handleRequestData = async (data) => {
+  const parsedFile = JSON.parse(data);
+
+  const coupons = parsedFile.Coupon.items;
+  const users = parsedFile.Users.items;
+
+  const resultingArray = [];
+
+  coupons.forEach((coupon) => {
+    const userMatch = users.find((user) => user.Uid === coupon.Uiduser);
+    const couponsCount = coupons.filter((item) => userMatch.Uid === item.Uiduser);
+
+    const parsedCoupon = {
+      'Код купона': coupon.Number,
+      Покупатель: userMatch.Name,
+      Телефон: userMatch.Telephone,
+      'Кол-во купонов у покупателя': couponsCount.length,
+    };
+
+    resultingArray.push(parsedCoupon);
+  });
+
+  return addUsersToDb(resultingArray);
+};
