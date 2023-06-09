@@ -116,6 +116,7 @@ export const handleRequestData = async (data) => {
   const users = parsedFile.Users.items;
 
   const resultingArray = [];
+  let counter = 0;
 
   coupons.forEach((coupon) => {
     const userMatch = users.find((user) => user.Uid === coupon.Uiduser);
@@ -126,10 +127,12 @@ export const handleRequestData = async (data) => {
       Покупатель: userMatch.Name,
       Телефон: userMatch.Telephone,
       'Кол-во купонов у покупателя': couponsCount.length,
+      'Уникальный id для розыгрыша': counter += 1,
     };
 
     resultingArray.push(parsedCoupon);
   });
 
+  counter = 0;
   return addUsersToDb(resultingArray);
 };

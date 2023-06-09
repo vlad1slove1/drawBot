@@ -17,7 +17,7 @@ const getFixturePath = (filename) => resolve(__dirname, '..', '..', '__fixtures_
 export const fillArrWithTickets = (res, arr) => {
   res.forEach((item) => {
     const uniqueTicketId = Object.values(item)[1];
-    const uniqueTicketNumber = Object.values(item)[6];
+    const uniqueTicketNumber = Object.values(item)[5];
 
     /**
      * Так как telegram на своей стороне парсит все тексты и ищет в них
