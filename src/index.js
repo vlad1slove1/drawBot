@@ -14,7 +14,8 @@ const { PORT, EXPRESS_ACCESS_TOKEN } = process.env;
 
 const app = express();
 
-app.use(bodyParser.json({ limit: '10mb' }));
+// При необходимости, нужно изменить парсер на raw или text
+app.use(bodyParser.json({ limit: '32mb' }));
 app.use(express.static('static'));
 app.use(helmet());
 
@@ -36,11 +37,10 @@ app.post('/api/v1/coupons', (req, res) => {
       res.status(401).json({ message: 'Auth failed' });
     } else {
       // Обработка данных
-      const body = JSON.parse(req.body);
-      handleRequestData(body);
+      handleRequestData(req.body);
       syncSheetsToMongo();
 
-      res.json({ message: "you're done!" });
+      res.json({ message: 'Data successfully synchronized' });
     }
   } catch (error) {
     console.log(error.message);
